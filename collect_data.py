@@ -192,8 +192,11 @@ def main():
     monthly_avg.to_csv("data/monthly_averages.csv", index=False)
     
     # 3. Dados do Mapa (Geral)
+    # 3. Dados do Mapa (Geral)
+    # 3. Dados do Mapa (Geral)
+   # 3. Dados do Mapa (Geral)
     map_data = df.groupby(['city', 'country', 'continent', 'latitude', 'longitude']).agg({
-        'pm25': 'mean', 'pm10': 'mean', 'aqi': 'mean'
+        'pm25': 'mean', 'pm10': 'mean', 'no2': 'mean', 'o3': 'mean', 'so2': 'mean', 'aqi': 'mean'
     }).round(2).reset_index()
     df = df.dropna(subset=['city', 'country', 'continent'])
     map_data.to_json("data/map_data.json", orient="records", indent=2)

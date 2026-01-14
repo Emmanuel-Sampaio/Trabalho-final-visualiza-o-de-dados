@@ -430,9 +430,7 @@ async function createMap() {
         subdomains: 'abcd',
         maxZoom: 19
     }).addTo(mapInstance);
-    
-    // Add city markers
-mapData.forEach(city => {
+    mapData.forEach(city => {
     // 1. Pega o valor bruto do poluente selecionado
     const rawValue = city[currentPollutant];
 
@@ -475,7 +473,7 @@ mapData.forEach(city => {
         this.setStyle({ weight: 1.5, fillOpacity: 0.7 });
     });
 });
-    
+        
 }
 
 // ========================================
