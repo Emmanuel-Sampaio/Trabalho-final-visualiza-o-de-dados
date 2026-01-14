@@ -7,7 +7,6 @@ import random
 import math
 import os
 
-# Lista expandida para 40 cidades (incluindo pontos estratégicos globais)
 CITIES = [
     # Ásia (15 cidades)
     {"name": "Delhi", "country": "IN", "lat": 28.7041, "lon": 77.1025, "continent": "Asia"},
@@ -66,7 +65,7 @@ def generate_synthetic_data():
     all_data = []
     end_date = datetime(2025, 12, 31)
     start_date = datetime(2023, 1, 1)
-    
+
     pollution_base = {
         # Ásia
         "Delhi": {"pm25": 110, "pm10": 200, "no2": 55, "o3": 45, "so2": 15, "variability": 40},
@@ -120,88 +119,110 @@ def generate_synthetic_data():
         "Sydney": {"pm25": 15, "pm10": 30, "no2": 25, "o3": 50, "so2": 3, "variability": 7},
         "Melbourne": {"pm25": 12, "pm10": 25, "no2": 20, "o3": 45, "so2": 2, "variability": 6},
     }
-    
+
     current_date = start_date
     while current_date <= end_date:
         for city in CITIES:
             city_name = city["name"]
-            if city_name not in pollution_base: continue
-            
+            if city_name not in pollution_base:
+                continue
+
             base = pollution_base[city_name]
             month = current_date.month
             seasonal_factor = 1.0
-            
-            # Lógica Sazonal: Inverno costuma ter ar mais estagnado e maior queima de combustível
-            if month in [12, 1, 2]: # Inverno Norte / Verão Sul
+
+            if month in [12, 1, 2]:
                 seasonal_factor = 1.3 if city["continent"] in ["Europe", "Asia", "North America"] else 0.85
-            elif month in [6, 7, 8]: # Verão Norte / Inverno Sul
+            elif month in [6, 7, 8]:
                 seasonal_factor = 0.85 if city["continent"] in ["Europe", "Asia", "North America"] else 1.2
-            
+
             daily_var = random.gauss(0, base["variability"])
             pm25 = max(5, base["pm25"] * seasonal_factor + daily_var)
             pm10 = max(10, base["pm10"] * seasonal_factor + daily_var * 1.5)
             no2 = max(5, base["no2"] * seasonal_factor + daily_var * 0.5)
             o3 = max(10, base["o3"] + daily_var * 0.3)
             so2 = max(1, base["so2"] * seasonal_factor + daily_var * 0.2)
-            
-            # AQI simplificado baseado em PM2.5
-            if pm25 <= 12: aqi = pm25 * 4.17
-            elif pm25 <= 35.4: aqi = 50 + (pm25 - 12) * 2.14
-            elif pm25 <= 55.4: aqi = 100 + (pm25 - 35.4) * 2.5
-            elif pm25 <= 150.4: aqi = 150 + (pm25 - 55.4) * 1.05
-            else: aqi = 200 + (pm25 - 150.4) * 1.05
-            
+
+            if pm25 <= 12:
+                aqi = pm25 * 4.17
+            elif pm25 <= 35.4:
+                aqi = 50 + (pm25 - 12) * 2.14
+            elif pm25 <= 55.4:
+                aqi = 100 + (pm25 - 35.4) * 2.5
+            elif pm25 <= 150.4:
+                aqi = 150 + (pm25 - 55.4) * 1.05
+            else:
+                aqi = 200 + (pm25 - 150.4) * 1.05
+
             all_data.append({
-                "city": city_name, "country": city["country"], "continent": city["continent"],
-                "latitude": city["lat"], "longitude": city["lon"], "date": current_date.strftime("%Y-%m-%d"),
-                "pm25": round(pm25, 2), "pm10": round(pm10, 2), "no2": round(no2, 2),
-                "o3": round(o3, 2), "so2": round(so2, 2), "aqi": round(aqi, 1)
+                "city": city_name,
+                "country": city["country"],
+                "continent": city["continent"],
+                "latitude": city["lat"],
+                "longitude": city["lon"],
+                "date": current_date.strftime("%Y-%m-%d"),
+                "pm25": round(pm25, 2),
+                "pm10": round(pm10, 2),
+                "no2": round(no2, 2),
+                "o3": round(o3, 2),
+                "so2": round(so2, 2),
+                "aqi": round(aqi, 1)
             })
         current_date += timedelta(days=1)
+
     return pd.DataFrame(all_data)
 
 def main():
-    # Garantir que a pasta data existe
     if not os.path.exists('data'):
         os.makedirs('data')
-        
-    print("Gerando dados de qualidade do ar para 40 cidades mundiais...")
+
     df = generate_synthetic_data()
-    
-    print(f"Total de registros: {len(df)}")
-    
-    # Salvando os arquivos
+
     df.to_csv("data/air_quality_raw.csv", index=False)
-    
-    # Agregações
+
     df['date_dt'] = pd.to_datetime(df['date'])
     df['year'] = df['date_dt'].dt.year
     df['month'] = df['date_dt'].dt.month
     df['year_month'] = df['date_dt'].dt.to_period('M').astype(str)
-    
-    # 1. Médias Anuais
-    annual_avg = df.groupby(['city', 'country', 'continent', 'latitude', 'longitude', 'year']).agg({
-        'pm25': 'mean', 'pm10': 'mean', 'no2': 'mean', 'o3': 'mean', 'so2': 'mean', 'aqi': 'mean'
+
+    annual_avg = df.groupby(
+        ['city', 'country', 'continent', 'latitude', 'longitude', 'year']
+    ).agg({
+        'pm25': 'mean',
+        'pm10': 'mean',
+        'no2': 'mean',
+        'o3': 'mean',
+        'so2': 'mean',
+        'aqi': 'mean'
     }).round(2).reset_index()
+
     annual_avg.to_csv("data/annual_averages.csv", index=False)
-    
-    # 2. Médias Mensais
-    monthly_avg = df.groupby(['city', 'country', 'continent', 'year_month', 'month']).agg({
-        'pm25': 'mean', 'pm10': 'mean', 'no2': 'mean', 'o3': 'mean', 'so2': 'mean', 'aqi': 'mean'
+
+    monthly_avg = df.groupby(
+        ['city', 'country', 'continent', 'year_month', 'month']
+    ).agg({
+        'pm25': 'mean',
+        'pm10': 'mean',
+        'no2': 'mean',
+        'o3': 'mean',
+        'so2': 'mean',
+        'aqi': 'mean'
     }).round(2).reset_index()
+
     monthly_avg.to_csv("data/monthly_averages.csv", index=False)
-    
-    # 3. Dados do Mapa (Geral)
-    # 3. Dados do Mapa (Geral)
-    # 3. Dados do Mapa (Geral)
-   # 3. Dados do Mapa (Geral)
-    map_data = df.groupby(['city', 'country', 'continent', 'latitude', 'longitude']).agg({
-        'pm25': 'mean', 'pm10': 'mean', 'no2': 'mean', 'o3': 'mean', 'so2': 'mean', 'aqi': 'mean'
+
+    map_data = df.groupby(
+        ['city', 'country', 'continent', 'latitude', 'longitude']
+    ).agg({
+        'pm25': 'mean',
+        'pm10': 'mean',
+        'no2': 'mean',
+        'o3': 'mean',
+        'so2': 'mean',
+        'aqi': 'mean'
     }).round(2).reset_index()
-    df = df.dropna(subset=['city', 'country', 'continent'])
+
     map_data.to_json("data/map_data.json", orient="records", indent=2)
-    
-    print("\n✓ Processamento concluído! Arquivos salvos na pasta /data.")
 
 if __name__ == "__main__":
     main()

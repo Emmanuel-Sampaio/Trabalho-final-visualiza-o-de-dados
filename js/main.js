@@ -1,8 +1,4 @@
-// ========================================
-// GLOBAL VARIABLES
-// ========================================
-
-let ndx; // Crossfilter instance
+let ndx;
 let allData = [];
 let dailyData = [];
 let mapInstance;
@@ -10,7 +6,6 @@ let currentPollutant = 'pm25';
 let currentYear = 'all';
 let currentContinent = 'all';
 
-// Color scales
 const colorScales = {
     pm25: d3.scaleThreshold()
         .domain([12, 35.4, 55.4, 150.4])
@@ -32,7 +27,6 @@ const colorScales = {
         .range(['#10b981', '#fbbf24', '#f97316', '#ef4444', '#dc2626'])
 };
 
-// City colors for time series (expandido para 30 cores)
 const cityColors = [
     '#00d9ff', '#ff006e', '#10b981', '#fbbf24', '#f97316',
     '#ef4444', '#a855f7', '#06b6d4', '#84cc16', '#f43f5e',
@@ -42,19 +36,11 @@ const cityColors = [
     '#a78bfa', '#2dd4bf', '#fca5a5', '#e879f9', '#60a5fa'
 ];
 
-// ========================================
-// DATA LOADING
-// ========================================
-
 async function loadData() {
     try {
-        // Load monthly averages for main charts
         const monthlyData = await d3.csv('data/monthly_averages.csv');
-        
-        // Load daily data for heatmap
         dailyData = await d3.json('data/daily_data.json');
         
-        // Process monthly data
         monthlyData.forEach(d => {
             d.pm25 = +d.pm25;
             d.pm10 = +d.pm10;
@@ -67,11 +53,8 @@ async function loadData() {
         });
         
         allData = monthlyData;
-        
-        // Initialize crossfilter
         ndx = crossfilter(allData);
         
-        // Initialize visualizations
         initializeFilters();
         createBarChart();
         createTimeSeriesChart();
@@ -86,30 +69,22 @@ async function loadData() {
     }
 }
 
-// ========================================
-// FILTERS
-// ========================================
-
 function initializeFilters() {
-    // Pollutant filter
     d3.select('#pollutant-select').on('change', function() {
         currentPollutant = this.value;
         updateAllCharts();
     });
     
-    // Year filter
     d3.select('#year-select').on('change', function() {
         currentYear = this.value;
         updateAllCharts();
     });
     
-    // Continent filter
     d3.select('#continent-select').on('change', function() {
         currentContinent = this.value;
         updateAllCharts();
     });
     
-    // Reset button
     d3.select('#reset-btn').on('click', function() {
         currentPollutant = 'pm25';
         currentYear = 'all';
@@ -138,17 +113,12 @@ function updateAllCharts() {
     createCalendarHeatmap();
 }
 
-// ========================================
-// CHART 1: BAR CHART
-// ========================================
-
 function createBarChart() {
     const container = d3.select('#bar-chart');
     container.selectAll('*').remove();
     
     const filteredData = getFilteredData();
     
-    // Aggregate by city
     const cityData = d3.rollup(
         filteredData,
         v => d3.mean(v, d => d[currentPollutant]),
@@ -157,9 +127,8 @@ function createBarChart() {
     
     const data = Array.from(cityData, ([city, value]) => ({ city, value }))
         .sort((a, b) => d3.descending(a.value, b.value))
-        .slice(0, 20);  // Top 20 cidades
+        .slice(0, 20);
     
-    // Dimensions
     const margin = { top: 20, right: 30, bottom: 120, left: 80 };
     const width = container.node().getBoundingClientRect().width - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
@@ -170,7 +139,6 @@ function createBarChart() {
         .append('g')
         .attr('transform', `translate(${margin.left},${margin.top})`);
     
-    // Scales
     const x = d3.scaleBand()
         .domain(data.map(d => d.city))
         .range([0, width])
@@ -181,7 +149,6 @@ function createBarChart() {
         .nice()
         .range([height, 0]);
     
-    // Axes
     svg.append('g')
         .attr('class', 'axis')
         .attr('transform', `translate(0,${height})`)
@@ -194,7 +161,6 @@ function createBarChart() {
         .attr('class', 'axis')
         .call(d3.axisLeft(y));
     
-    // Grid lines
     svg.append('g')
         .attr('class', 'grid')
         .call(d3.axisLeft(y)
@@ -203,7 +169,6 @@ function createBarChart() {
         .selectAll('line')
         .attr('class', 'grid-line');
     
-    // Bars
     const bars = svg.selectAll('.bar')
         .data(data)
         .enter()
@@ -216,14 +181,12 @@ function createBarChart() {
         .attr('fill', d => colorScales[currentPollutant](d.value))
         .attr('rx', 4);
     
-    // Animate bars
     bars.transition()
         .duration(800)
         .delay((d, i) => i * 50)
         .attr('y', d => y(d.value))
         .attr('height', d => height - y(d.value));
     
-    // Tooltips
     bars.on('mouseover', function(event, d) {
         d3.select(this)
             .transition()
@@ -243,7 +206,6 @@ function createBarChart() {
         hideTooltip();
     });
     
-    // Labels
     svg.append('text')
         .attr('x', width / 2)
         .attr('y', height + margin.bottom - 10)
@@ -264,17 +226,12 @@ function createBarChart() {
         .text(`${getPollutantLabel(currentPollutant).toUpperCase()} (µg/m³)`);
 }
 
-// ========================================
-// CHART 2: TIME SERIES
-// ========================================
-
 function createTimeSeriesChart() {
     const container = d3.select('#time-chart');
     container.selectAll('*').remove();
     
     const filteredData = getFilteredData();
     
-    // Get top cities
     const cityAverages = d3.rollup(
         filteredData,
         v => d3.mean(v, d => d[currentPollutant]),
@@ -283,15 +240,13 @@ function createTimeSeriesChart() {
     
     const topCities = Array.from(cityAverages, ([city, value]) => ({ city, value }))
         .sort((a, b) => d3.descending(a.value, b.value))
-        .slice(0, 10)  // Top 10 cidades
+        .slice(0, 10)
         .map(d => d.city);
     
     const dataForChart = filteredData.filter(d => topCities.includes(d.city));
     
-    // Group by city
     const cityGroups = d3.group(dataForChart, d => d.city);
     
-    // Dimensions
     const margin = { top: 20, right: 30, bottom: 60, left: 80 };
     const width = container.node().getBoundingClientRect().width - margin.left - margin.right;
     const height = 500 - margin.top - margin.bottom;
@@ -302,7 +257,6 @@ function createTimeSeriesChart() {
         .append('g')
         .attr('transform', `translate(${margin.left},${margin.top})`);
     
-    // Scales
     const x = d3.scaleTime()
         .domain(d3.extent(dataForChart, d => d.date))
         .range([0, width]);
@@ -312,7 +266,6 @@ function createTimeSeriesChart() {
         .nice()
         .range([height, 0]);
     
-    // Axes
     svg.append('g')
         .attr('class', 'axis')
         .attr('transform', `translate(0,${height})`)
@@ -322,7 +275,6 @@ function createTimeSeriesChart() {
         .attr('class', 'axis')
         .call(d3.axisLeft(y));
     
-    // Grid
     svg.append('g')
         .attr('class', 'grid')
         .call(d3.axisLeft(y)
@@ -331,13 +283,11 @@ function createTimeSeriesChart() {
         .selectAll('line')
         .attr('class', 'grid-line');
     
-    // Line generator
     const line = d3.line()
         .x(d => x(d.date))
         .y(d => y(d[currentPollutant]))
         .curve(d3.curveMonotoneX);
     
-    // Draw lines
     cityGroups.forEach((values, city) => {
         const cityIndex = topCities.indexOf(city);
         const color = cityColors[cityIndex % cityColors.length];
@@ -351,7 +301,6 @@ function createTimeSeriesChart() {
             .attr('fill', 'none')
             .attr('opacity', 0.8);
         
-        // Animate line
         const totalLength = path.node().getTotalLength();
         path
             .attr('stroke-dasharray', totalLength + ' ' + totalLength)
@@ -362,7 +311,6 @@ function createTimeSeriesChart() {
             .attr('stroke-dashoffset', 0);
     });
     
-    // Labels
     svg.append('text')
         .attr('x', width / 2)
         .attr('y', height + margin.bottom - 10)
@@ -382,7 +330,6 @@ function createTimeSeriesChart() {
         .style('font-size', '12px')
         .text(`${getPollutantLabel(currentPollutant).toUpperCase()} (µg/m³)`);
     
-    // Create legend
     createTimeLegend(topCities);
 }
 
@@ -403,19 +350,13 @@ function createTimeLegend(cities) {
     });
 }
 
-// ========================================
-// CHART 3: INTERACTIVE MAP (SPECIAL)
-// ========================================
-
 async function createMap() {
     const mapData = await d3.json('data/map_data.json');
     
-    // Remove existing map
     if (mapInstance) {
         mapInstance.remove();
     }
     
-    // Initialize map
     mapInstance = L.map('map', {
         center: [20, 0],
         zoom: 2,
@@ -424,64 +365,49 @@ async function createMap() {
         zoomControl: true
     });
     
-    // Dark tile layer
     L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
         attribution: '©OpenStreetMap, ©CartoDB',
         subdomains: 'abcd',
         maxZoom: 19
     }).addTo(mapInstance);
+    
     mapData.forEach(city => {
-    // 1. Pega o valor bruto do poluente selecionado
-    const rawValue = city[currentPollutant];
+        const rawValue = city[currentPollutant];
+        const value = parseFloat(rawValue);
 
-    // 2. Validação robusta: verifica se não é nulo/undefined, 
-    // converte para número e checa se é um número válido e positivo
-    const value = parseFloat(rawValue);
+        if (isNaN(value) || value <= 0) {
+            return;
+        }
 
-    if (isNaN(value) || value <= 0) {
-        return; // Pula esta cidade sem quebrar o mapa
-    }
+        const color = colorScales[currentPollutant](value);
+        const radius = Math.max(5, Math.sqrt(value) * 2.5);
 
-    // 3. Define a cor com base na escala (garantindo que o valor existe)
-    const color = colorScales[currentPollutant](value);
+        const circle = L.circleMarker([city.latitude, city.longitude], {
+            radius: radius,
+            fillColor: color,
+            color: '#ffffff',
+            weight: 1.5,
+            opacity: 0.9,
+            fillOpacity: 0.7
+        }).addTo(mapInstance);
 
-    // 4. Define o raio (evita que valores muito pequenos desapareçam)
-    const radius = Math.max(5, Math.sqrt(value) * 2.5);
+        circle.bindPopup(`
+            <div style="font-family: sans-serif; padding: 5px;">
+                <strong style="text-transform: uppercase;">${city.city}</strong><br/>
+                <span>${getPollutantLabel(currentPollutant)}: <b>${value.toFixed(2)}</b> µg/m³</span>
+            </div>
+        `);
 
-    const circle = L.circleMarker([city.latitude, city.longitude], {
-        radius: radius,
-        fillColor: color,
-        color: '#ffffff',
-        weight: 1.5,
-        opacity: 0.9,
-        fillOpacity: 0.7
-    }).addTo(mapInstance);
-
-    // Bind do Popup (usando o valor validado)
-    circle.bindPopup(`
-        <div style="font-family: sans-serif; padding: 5px;">
-            <strong style="text-transform: uppercase;">${city.city}</strong><br/>
-            <span>${getPollutantLabel(currentPollutant)}: <b>${value.toFixed(2)}</b> µg/m³</span>
-        </div>
-    `);
-
-    // Efeitos de Hover
-    circle.on('mouseover', function() {
-        this.setStyle({ weight: 3, fillOpacity: 1 });
+        circle.on('mouseover', function() {
+            this.setStyle({ weight: 3, fillOpacity: 1 });
+        });
+        circle.on('mouseout', function() {
+            this.setStyle({ weight: 1.5, fillOpacity: 0.7 });
+        });
     });
-    circle.on('mouseout', function() {
-        this.setStyle({ weight: 1.5, fillOpacity: 0.7 });
-    });
-});
-        
 }
 
-// ========================================
-// CHART 4: CALENDAR HEATMAP (SPECIAL)
-// ========================================
-
 function createCalendarHeatmap() {
-    // Populate city selector
     const citySelect = d3.select('#heatmap-city-select');
     const cities = [...new Set(dailyData.map(d => d.city))].sort();
     
@@ -497,7 +423,6 @@ function createCalendarHeatmap() {
         });
     }
     
-    // Render with first city
     renderCalendarHeatmap(cities[0]);
 }
 
@@ -505,7 +430,6 @@ function renderCalendarHeatmap(cityName) {
     const container = d3.select('#calendar-heatmap');
     container.selectAll('*').remove();
     
-    // Filter data for selected city
     const cityData = dailyData
         .filter(d => d.city === cityName)
         .map(d => ({
@@ -513,10 +437,8 @@ function renderCalendarHeatmap(cityName) {
             date: new Date(d.date)
         }));
     
-    // Group by year
     const years = [...new Set(cityData.map(d => d.date.getFullYear()))].sort();
     
-    // Dimensions
     const cellSize = 15;
     const yearHeight = cellSize * 8;
     const yearSpacing = 40;
@@ -530,19 +452,16 @@ function renderCalendarHeatmap(cityName) {
         .append('g')
         .attr('transform', `translate(${margin.left},${margin.top})`);
     
-    // Color scale
     const extent = d3.extent(cityData, d => d[currentPollutant]);
     const colorScale = d3.scaleSequential()
         .domain(extent)
         .interpolator(d3.interpolateRgb('#10b981', '#ef4444'));
     
-    // Create heatmap for each year
     years.forEach((year, yearIndex) => {
         const yearData = cityData.filter(d => d.date.getFullYear() === year);
         const yearGroup = svg.append('g')
             .attr('transform', `translate(0,${yearIndex * (yearHeight + yearSpacing)})`);
         
-        // Year label
         yearGroup.append('text')
             .attr('x', -10)
             .attr('y', yearHeight / 2)
@@ -553,7 +472,6 @@ function renderCalendarHeatmap(cityName) {
             .style('font-size', '18px')
             .text(year);
         
-        // Create cells
         const firstDay = new Date(year, 0, 1);
         const lastDay = new Date(year, 11, 31);
         
@@ -600,7 +518,6 @@ function renderCalendarHeatmap(cityName) {
                 hideTooltip();
             });
         
-        // Month labels
         const months = d3.timeMonths(firstDay, lastDay);
         yearGroup.selectAll('.month-label')
             .data(months)
@@ -615,8 +532,6 @@ function renderCalendarHeatmap(cityName) {
             .text(d => d.toLocaleDateString('pt-BR', { month: 'short' }).toUpperCase());
     });
 }
-
-
 
 function getPollutantLabel(pollutant) {
     const labels = {
@@ -663,12 +578,9 @@ function hideTooltip() {
     }
 }
 
-
-
 document.addEventListener('DOMContentLoaded', () => {
     loadData();
     
-    // Smooth scroll for scroll indicator
     document.querySelector('.scroll-indicator')?.addEventListener('click', () => {
         document.querySelector('.filters-section').scrollIntoView({ 
             behavior: 'smooth' 
