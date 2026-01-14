@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualidade do Ar Global | Visualização Interativa</title>
+    
+    <!-- CSS -->
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <!-- D3.js v7 -->
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    <!-- Crossfilter -->
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crossfilter2/1.5.4/crossfilter.min.js"></script>
+    
+    <!-- DC.js -->
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dc/4.2.7/dc.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dc/4.2.7/dc.min.js"></script>
+    
+    <!-- Leaflet para mapas -->
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Crimson+Pro:wght@400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <!-- Hero Section -->
+    <header class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+            <div class="hero-badge">DADOS 2023-2025</div>
+            <h1 class="hero-title">
+                <span class="title-line">QUALIDADE</span>
+                <span class="title-line">DO AR</span>
+                <span class="title-line-small">global</span>
+            </h1>
+           <p class="hero-subtitle">Visualização interativa de dados de poluição atmosférica em 31 grandes cidades mundiais</p>
+            <div class="hero-stats">
+                <div class="stat-item">
+                    <div class="stat-number">31</div>
+                    <div class="stat-label">Cidades</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-number">32K+</div>
+                    <div class="stat-label">Registros</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-number">5</div>
+                    <div class="stat-label">Poluentes</div>
+                </div>
+            </div>
+            <div class="scroll-indicator">
+                <span>↓</span>
+                <span class="scroll-text">Explore os dados</span>
+            </div>
+        </div>
+    </header>
+
+    <!-- Filters Section -->
+    <section class="filters-section">
+        <div class="container">
+            <div class="filters-grid">
+                <div class="filter-card">
+                    <label class="filter-label">POLUENTE</label>
+                    <select id="pollutant-select" class="filter-select">
+                        <option value="pm25" selected>PM2.5 - Material Particulado</option>
+                        <option value="pm10">PM10 - Partículas Inaláveis</option>
+                        <option value="no2">NO₂ - Dióxido de Nitrogênio</option>
+                        <option value="o3">O₃ - Ozônio</option>
+                        <option value="so2">SO₂ - Dióxido de Enxofre</option>
+                        <option value="aqi">AQI - Índice de Qualidade</option>
+                    </select>
+                </div>
+                <div class="filter-card">
+                    <label class="filter-label">ANO</label>
+                    <select id="year-select" class="filter-select">
+                        <option value="all" selected>Todos os Anos</option>
+                        <option value="2023">2023</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                    </select>
+                </div>
+                <div class="filter-card">
+                    <label class="filter-label">CONTINENTE</label>
+                    <select id="continent-select" class="filter-select">
+                        <option value="all" selected>Todos</option>
+                        <option value="Asia">Ásia</option>
+                        <option value="Europe">Europa</option>
+                        <option value="North America">América do Norte</option>
+                        <option value="South America">América do Sul</option>
+                        <option value="Africa">África</option>
+                        <option value="Oceania">Oceania</option>
+                    </select>
+                </div>
+                <div class="filter-card">
+                    <button id="reset-btn" class="reset-btn">
+                        <span>↻</span> Resetar Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Main Content -->
+    <main class="main-content">
+        <div class="container">
+            
+            <!-- Chart 1: Bar Chart -->
+            <section class="chart-section">
+                <div class="section-header">
+                    <div class="section-number">01</div>
+                    <div class="section-info">
+                        <h2 class="section-title">Ranking de Poluição por Cidade</h2>
+                        <p class="section-desc">Comparação das concentrações médias anuais entre as principais cidades</p>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div id="bar-chart" class="chart"></div>
+                </div>
+            </section>
+
+            <!-- Chart 2: Time Series -->
+            <section class="chart-section">
+                <div class="section-header">
+                    <div class="section-number">02</div>
+                    <div class="section-info">
+                        <h2 class="section-title">Evolução Temporal</h2>
+                        <p class="section-desc">Tendências mensais de poluição ao longo do período analisado</p>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div id="time-chart" class="chart"></div>
+                    <div class="legend-container" id="legend-container"></div>
+                </div>
+            </section>
+
+            <!-- Chart 3: Interactive Map (Special) -->
+            <section class="chart-section">
+                <div class="section-header">
+                    <div class="section-number">03</div>
+                    <div class="section-info">
+                        <h2 class="section-title">Mapa Global Interativo</h2>
+                        <p class="section-desc">Distribuição geográfica da qualidade do ar nas cidades monitoradas</p>
+                    </div>
+                    <div class="special-badge">GRÁFICO ESPECIAL</div>
+                </div>
+                <div class="chart-container map-container">
+                    <div id="map" class="map-chart"></div>
+                    <div class="map-legend">
+                        <div class="map-legend-title">Nível de Poluição</div>
+                        <div class="map-legend-items">
+                            <div class="map-legend-item">
+                                <div class="legend-color" style="background: #10b981"></div>
+                                <span>Bom (0-50)</span>
+                            </div>
+                            <div class="map-legend-item">
+                                <div class="legend-color" style="background: #fbbf24"></div>
+                                <span>Moderado (51-100)</span>
+                            </div>
+                            <div class="map-legend-item">
+                                <div class="legend-color" style="background: #f97316"></div>
+                                <span>Ruim (101-150)</span>
+                            </div>
+                            <div class="map-legend-item">
+                                <div class="legend-color" style="background: #ef4444"></div>
+                                <span>Muito Ruim (150+)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Chart 4: Calendar Heatmap (Special) -->
+            <section class="chart-section">
+                <div class="section-header">
+                    <div class="section-number">04</div>
+                    <div class="section-info">
+                        <h2 class="section-title">Calendário de Poluição</h2>
+                        <p class="section-desc">Padrões diários e sazonais de qualidade do ar</p>
+                    </div>
+                    <div class="special-badge">GRÁFICO ESPECIAL</div>
+                </div>
+                <div class="chart-container">
+                    <div class="heatmap-controls">
+                        <select id="heatmap-city-select" class="filter-select">
+                            <!-- Cities will be populated dynamically -->
+                        </select>
+                    </div>
+                    <div id="calendar-heatmap" class="chart"></div>
+                    <div class="heatmap-legend">
+                        <span class="heatmap-legend-label">Menor</span>
+                        <div class="heatmap-legend-gradient"></div>
+                        <span class="heatmap-legend-label">Maior</span>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- Info Section -->
+    <section class="info-section">
+        <div class="container">
+            <div class="info-grid">
+                <div class="info-card">
+                    <div class="info-icon">📊</div>
+                    <h3>Sobre os Dados</h3>
+                    <p>Dados de qualidade do ar coletados de 15 grandes cidades mundiais entre 2023 e 2025, incluindo medições de PM2.5, PM10, NO₂, O₃ e SO₂.</p>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">🌍</div>
+                    <h3>Cobertura Global</h3>
+                    <p>Monitoramento de cidades em todos os continentes: Ásia, Europa, Américas, África e Oceania.</p>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">⚠️</div>
+                    <h3>Impacto na Saúde</h3>
+                    <p>A poluição do ar afeta bilhões de pessoas em áreas urbanas, causando problemas respiratórios e cardiovasculares.</p>
+                </div>
+                <div class="info-card">
+                    <div class="info-icon">🔬</div>
+                    <h3>Metodologia</h3>
+                    <p>Análise baseada em padrões da OMS e dados agregados diariamente para identificar tendências e sazonalidade.</p>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-info">
+                    <h3>Projeto Final - Visualização de Dados</h3>
+                    <p>Emmanuel Lima Sampaio | 539726 | Semestre 2025.2</p>
+                </div>
+                <div class="footer-links">
+                    <a href="https://openaq.org" target="_blank">OpenAQ</a>
+                    <a href="https://www.who.int" target="_blank">WHO</a>
+                    <a href="https://github.com" target="_blank">GitHub</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <!-- Main JavaScript -->
+    <script src="js/main.js"></script>
+</body>
+</html>
