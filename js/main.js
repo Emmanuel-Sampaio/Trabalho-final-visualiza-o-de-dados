@@ -5,6 +5,22 @@ let mapInstance;
 let currentPollutant = 'pm25';
 let currentYear = 'all';
 let currentContinent = 'all';
+let currentCountry = 'all';
+let selectedCities = []; // Array de cidades selecionadas
+
+// Mapa de continentes para países
+const continentCountries = {
+    'all': [],
+    'Asia': [],
+    'Europe': [],
+    'North America': [],
+    'South America': [],
+    'Africa': [],
+    'Oceania': []
+};
+
+// Mapa de países para cidades
+const countryCities = {};
 
 const colorScales = {
     pm25: d3.scaleThreshold()
@@ -55,6 +71,9 @@ async function loadData() {
         allData = monthlyData;
         ndx = crossfilter(allData);
         
+        // Construir mapa de continentes e países
+        buildContinentCountryMap();
+        
         initializeFilters();
         createBarChart();
         createTimeSeriesChart();
@@ -67,6 +86,53 @@ async function loadData() {
         console.error('Erro ao carregar dados:', error);
         document.body.innerHTML = '<div class="loading">Erro ao carregar dados. Verifique o console.</div>';
     }
+}
+
+function buildContinentCountryMap() {
+    // Limpar os mapas
+    Object.keys(continentCountries).forEach(key => {
+        continentCountries[key] = [];
+    });
+    Object.keys(countryCities).forEach(key => {
+        delete countryCities[key];
+    });
+    
+    // Construir mapa de continentes para países e país para cidades
+    const uniqueData = new Map();
+    allData.forEach(d => {
+        const key = `${d.continent}-${d.country}`;
+        if (!uniqueData.has(key)) {
+            uniqueData.set(key, { continent: d.continent, country: d.country, city: d.city });
+        }
+        // Construir mapa de país para cidades
+        if (!countryCities[d.country]) {
+            countryCities[d.country] = [];
+        }
+        if (!countryCities[d.country].includes(d.city)) {
+            countryCities[d.country].push(d.city);
+        }
+    });
+    
+    // Agrupar países por continente
+    uniqueData.forEach(item => {
+        if (continentCountries[item.continent]) {
+            continentCountries[item.continent].push(item.country);
+        }
+        continentCountries['all'].push(item.country);
+    });
+    
+    // Ordenar países alfabeticamente
+    Object.keys(continentCountries).forEach(continent => {
+        continentCountries[continent] = [...new Set(continentCountries[continent])].sort();
+    });
+    
+    // Ordenar cidades alfabeticamente
+    Object.keys(countryCities).forEach(country => {
+        countryCities[country] = countryCities[country].sort();
+    });
+    
+    console.log('Mapa de continentes e países:', continentCountries);
+    console.log('Mapa de países e cidades:', countryCities);
 }
 
 function initializeFilters() {
@@ -82,27 +148,197 @@ function initializeFilters() {
     
     d3.select('#continent-select').on('change', function() {
         currentContinent = this.value;
+        currentCountry = 'all'; // Resetar país ao mudar continente
+        selectedCities = []; // Limpar cidades selecionadas ao mudar continente
+        updateCountrySelect();
+        updateCitySelect();
+        updateCityDisplay();
+        updateFilterStates();
         updateAllCharts();
+    });
+    
+    d3.select('#country-select').on('change', function() {
+        currentCountry = this.value;
+        updateCitySelect();
+        updateFilterStates();
+        updateAllCharts();
+    });
+    
+    d3.select('#city-select').on('change', function() {
+        const selectedCity = this.value;
+        if (selectedCity && !selectedCities.includes(selectedCity)) {
+            selectedCities.push(selectedCity);
+            updateCityDisplay();
+            updateFilterStates();
+            updateAllCharts();
+            this.value = ''; // Resetar o select para permitir nova seleção
+        }
     });
     
     d3.select('#reset-btn').on('click', function() {
         currentPollutant = 'pm25';
         currentYear = 'all';
         currentContinent = 'all';
+        currentCountry = 'all';
+        selectedCities = [];
         
         d3.select('#pollutant-select').property('value', 'pm25');
         d3.select('#year-select').property('value', 'all');
         d3.select('#continent-select').property('value', 'all');
+        d3.select('#city-select').property('value', '');
         
+        updateCountrySelect();
+        updateCitySelect();
+        updateCityDisplay();
+        updateFilterStates();
         updateAllCharts();
     });
+    
+    // Inicializar os selects de país e cidade
+    updateCountrySelect();
+    updateCitySelect();
+    updateFilterStates();
+}
+
+function updateCountrySelect() {
+    const countrySelect = d3.select('#country-select');
+    
+    // Se continente é 'all', desabilitar o select
+    if (currentContinent === 'all') {
+        countrySelect.property('disabled', true);
+        countrySelect.html('<option value="all" selected>Selecione um continente</option>');
+        return;
+    }
+    
+    // Abilitar o select e preencher com países do continente selecionado
+    countrySelect.property('disabled', false);
+    
+    const countries = continentCountries[currentContinent] || [];
+    
+    countrySelect.html('');
+    countrySelect.append('option')
+        .attr('value', 'all')
+        .property('selected', currentCountry === 'all')
+        .text('Todos os Países');
+    
+    countries.forEach(country => {
+        countrySelect.append('option')
+            .attr('value', country)
+            .property('selected', currentCountry === country)
+            .text(country);
+    });
+}
+
+function updateCitySelect() {
+    const citySelect = d3.select('#city-select');
+    
+    // Se não houver seleção de país ou continente, permitir adicionar cidades de qualquer país
+    if (currentCountry === 'all' || !currentCountry) {
+        citySelect.property('disabled', false);
+        
+        // Obter todas as cidades únicas dos dados
+        const allCities = [...new Set(allData.map(d => d.city))].sort();
+        
+        citySelect.html('');
+        citySelect.append('option')
+            .attr('value', '')
+            .text('Adicionar cidade');
+        
+        allCities.forEach(city => {
+            if (!selectedCities.includes(city)) {
+                citySelect.append('option')
+                    .attr('value', city)
+                    .text(city);
+            }
+        });
+    } else {
+        // Se houver seleção de país, mostrar cidades do país
+        citySelect.property('disabled', false);
+        
+        const cities = countryCities[currentCountry] || [];
+        
+        citySelect.html('');
+        citySelect.append('option')
+            .attr('value', '')
+            .text('Adicionar cidade');
+        
+        cities.forEach(city => {
+            if (!selectedCities.includes(city)) {
+                citySelect.append('option')
+                    .attr('value', city)
+                    .text(city);
+            }
+        });
+    }
+}
+
+function updateCityDisplay() {
+    const filterCard = document.querySelector('.filter-card:has(#city-select)');
+    if (!filterCard) return;
+    
+    // Remover display antigo se existir
+    const oldDisplay = filterCard.querySelector('.selected-cities');
+    if (oldDisplay) oldDisplay.remove();
+    
+    if (selectedCities.length > 0) {
+        const citiesDiv = document.createElement('div');
+        citiesDiv.className = 'selected-cities';
+        
+        selectedCities.forEach(city => {
+            const tag = document.createElement('div');
+            tag.className = 'city-tag';
+            
+            const span = document.createElement('span');
+            span.textContent = city;
+            tag.appendChild(span);
+            
+            const btn = document.createElement('button');
+            btn.className = 'remove-city-btn';
+            btn.textContent = '✕';
+            btn.addEventListener('click', () => {
+                selectedCities = selectedCities.filter(c => c !== city);
+                updateCityDisplay();
+                updateCitySelect();
+                updateFilterStates();
+                updateAllCharts();
+            });
+            tag.appendChild(btn);
+            
+            citiesDiv.appendChild(tag);
+        });
+        
+        filterCard.appendChild(citiesDiv);
+    }
+}
+
+function updateFilterStates() {
+    // Continente sempre habilitado
+    d3.select('#continent-select').property('disabled', false);
+    
+    // País desabilitado se continente é 'all'
+    if (currentContinent === 'all') {
+        d3.select('#country-select').property('disabled', true);
+    } else {
+        d3.select('#country-select').property('disabled', false);
+    }
+    
+    // Cidade sempre habilitada
+    d3.select('#city-select').property('disabled', false);
 }
 
 function getFilteredData() {
     return allData.filter(d => {
         const yearMatch = currentYear === 'all' || d.date.getFullYear() === +currentYear;
+        
+        // Se houver cidades selecionadas, usar apenas essas cidades (ignorar continente/país)
+        if (selectedCities.length > 0) {
+            return yearMatch && selectedCities.includes(d.city);
+        }
+        
+        // Caso contrário, usar filtros de continente e país
         const continentMatch = currentContinent === 'all' || d.continent === currentContinent;
-        return yearMatch && continentMatch;
+        const countryMatch = currentCountry === 'all' || d.country === currentCountry;
+        return yearMatch && continentMatch && countryMatch;
     });
 }
 
