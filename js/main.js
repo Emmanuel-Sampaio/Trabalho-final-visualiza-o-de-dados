@@ -348,6 +348,8 @@ function updateAllCharts() {
     createTimeSeriesChart();
     createMap();
     createCalendarHeatmap();
+    updateCityClassification();
+    updateOMSExceedance();
 }
 
 function updateStatisticsSection() {
@@ -942,6 +944,94 @@ function hideTooltip() {
     if (tooltip) {
         tooltip.style('opacity', 0);
     }
+}
+
+function updateCityClassification() {
+    const filteredData = getFilteredData();
+    
+    // Agregar por cidade
+    const cityAverages = d3.rollup(
+        filteredData,
+        v => d3.mean(v, d => d[currentPollutant]),
+        d => d.city
+    );
+    
+    // Converter para array e ordenar
+    const cities = Array.from(cityAverages).map(([city, value]) => ({ city, value }));
+    
+    // Definir thresholds baseado no poluente
+    const thresholds = {
+        pm25: { veryHigh: 80, high: 50, moderate: 30 },
+        pm10: { veryHigh: 150, high: 100, moderate: 50 },
+        no2: { veryHigh: 100, high: 60, moderate: 40 },
+        o3: { veryHigh: 120, high: 80, moderate: 50 },
+        so2: { veryHigh: 80, high: 50, moderate: 30 },
+        aqi: { veryHigh: 200, high: 100, moderate: 50 }
+    };
+    
+    const limits = thresholds[currentPollutant] || thresholds.pm25;
+    
+    // Classificar cidades
+    const classification = {
+        veryHigh: cities.filter(d => d.value > limits.veryHigh),
+        high: cities.filter(d => d.value > limits.high && d.value <= limits.veryHigh),
+        moderate: cities.filter(d => d.value > limits.moderate && d.value <= limits.high),
+        good: cities.filter(d => d.value <= limits.moderate)
+    };
+    
+    // Gerar HTML
+    const grid = d3.select('#classification-grid');
+    grid.selectAll('*').remove();
+    
+    const categories = [
+        { key: 'veryHigh', label: 'Muito Alto', class: 'danger' },
+        { key: 'high', label: 'Alto', class: 'warning' },
+        { key: 'moderate', label: 'Moderado', class: 'moderate' },
+        { key: 'good', label: 'Bom', class: 'good' }
+    ];
+    
+    categories.forEach(cat => {
+        const data = classification[cat.key];
+        const cityNames = data.map(d => d.city).join(', ');
+        const displayNames = cityNames.length > 50 ? cityNames.substring(0, 50) + '...' : cityNames;
+        
+        grid.append('div')
+            .attr('class', `classification-item ${cat.class}`)
+            .html(`
+                <span class="classification-label">${cat.label}</span>
+                <span class="classification-value">${data.length} ${data.length === 1 ? 'cidade' : 'cidades'}</span>
+                <span class="classification-detail">${getPollutantLabel(currentPollutant)}: ${limits[cat.key === 'veryHigh' ? 'veryHigh' : cat.key === 'high' ? 'high' : cat.key === 'moderate' ? 'moderate' : 0]} µg/m³</span>
+                <p class="classification-cities">${displayNames || '—'}</p>
+            `);
+    });
+}
+
+function updateOMSExceedance() {
+    // Usar todos os dados, não apenas os filtrados
+    // para contar cidades acima do limite OMS globalmente
+    if (allData.length === 0) {
+        d3.select('#cities-exceeding-oms').text('0');
+        return;
+    }
+    
+    // Agregar PM2.5 por cidade usando TODOS os dados
+    const cityAverages = d3.rollup(
+        allData,
+        v => d3.mean(v, d => d.pm25), // Sempre PM2.5 para OMS
+        d => d.city
+    );
+    
+    // Limite da OMS para PM2.5: 15 µg/m³ (média anual)
+    const omsLimit = 15;
+    let citiesExceeding = 0;
+    
+    cityAverages.forEach(value => {
+        if (value > omsLimit) {
+            citiesExceeding++;
+        }
+    });
+    
+    d3.select('#cities-exceeding-oms').text(citiesExceeding);
 }
 
 document.addEventListener('DOMContentLoaded', () => {
