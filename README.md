@@ -4,7 +4,9 @@
 ![Visualização de Dados](https://img.shields.io/badge/projeto-visualização--de--dados-blue)
 
 ## 📊 Sobre o Projeto
-**Site do projeto** : -[Visualização de Níveis de poluentes do ar em grandes cidades mundiais](https://emmanuel-sampaio.github.io/Trabalho-final-visualiza-o-de-dados/)
+**Site do projeto** : [Visualização de Níveis de poluentes do ar em grandes cidades mundiais](https://emmanuel-sampaio.github.io/Trabalho-final-visualiza-o-de-dados/)
+
+
 Projeto final da disciplina de Visualização de Dados desenvolvido por **Emmanuel Lima Sampaio** (539726) no semestre 2025.2.
 
 Este projeto apresenta uma plataforma web interativa para exploração de dados de qualidade do ar em 40 grandes cidades mundiais, abrangendo o período de 2023 a 2025.

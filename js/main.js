@@ -343,10 +343,80 @@ function getFilteredData() {
 }
 
 function updateAllCharts() {
+    updateStatisticsSection();
     createBarChart();
     createTimeSeriesChart();
     createMap();
     createCalendarHeatmap();
+}
+
+function updateStatisticsSection() {
+    const filteredData = getFilteredData();
+    
+    // Calcular poluição média
+    const avgPollution = d3.mean(filteredData, d => d[currentPollutant]);
+    
+    // Encontrar cidade mais poluída e mais limpa
+    const cityData = d3.rollup(
+        filteredData,
+        v => d3.mean(v, d => d[currentPollutant]),
+        d => d.city
+    );
+    
+    const citiesArray = Array.from(cityData, ([city, value]) => ({ city, value }))
+        .sort((a, b) => d3.descending(a.value, b.value));
+    
+    const mostPolluted = citiesArray[0];
+    const mostClean = citiesArray[citiesArray.length - 1];
+    
+    // Calcular tendência (comparar com período anterior)
+    let trendDirection = '↔';
+    let trendPercent = '0%';
+    let trendColor = '#9ca3af';
+    
+    if (currentYear !== 'all') {
+        const year = parseInt(currentYear);
+        const previousYear = year - 1;
+        
+        const currentYearData = allData.filter(d => 
+            d.date.getFullYear() === year &&
+            (currentContinent === 'all' || d.continent === currentContinent) &&
+            (currentCountry === 'all' || d.country === currentCountry) &&
+            (selectedCities.length === 0 || selectedCities.includes(d.city))
+        );
+        
+        const previousYearData = allData.filter(d => 
+            d.date.getFullYear() === previousYear &&
+            (currentContinent === 'all' || d.continent === currentContinent) &&
+            (currentCountry === 'all' || d.country === currentCountry) &&
+            (selectedCities.length === 0 || selectedCities.includes(d.city))
+        );
+        
+        if (currentYearData.length > 0 && previousYearData.length > 0) {
+            const currentAvg = d3.mean(currentYearData, d => d[currentPollutant]);
+            const previousAvg = d3.mean(previousYearData, d => d[currentPollutant]);
+            const percentChange = ((currentAvg - previousAvg) / previousAvg) * 100;
+            
+            if (Math.abs(percentChange) > 0.5) {
+                trendDirection = percentChange > 0 ? '↑' : '↓';
+                trendPercent = Math.abs(percentChange).toFixed(1) + '%';
+                trendColor = percentChange > 0 ? '#ef4444' : '#10b981';
+            }
+        }
+    }
+    
+    // Atualizar DOM
+    d3.select('#avg-pollution').text(avgPollution.toFixed(1));
+    d3.select('#most-polluted').text(mostPolluted ? mostPolluted.city : '--');
+    d3.select('#most-polluted-value').text(mostPolluted ? `${mostPolluted.value.toFixed(1)} µg/m³` : '--');
+    d3.select('#most-clean').text(mostClean ? mostClean.city : '--');
+    d3.select('#most-clean-value').text(mostClean ? `${mostClean.value.toFixed(1)} µg/m³` : '--');
+    d3.select('#trend-direction')
+        .text(trendDirection)
+        .style('color', trendColor);
+    d3.select('#trend-percent')
+        .text(trendPercent)
+        .style('color', trendColor);
 }
 
 function createBarChart() {
@@ -524,18 +594,78 @@ function createTimeSeriesChart() {
         .y(d => y(d[currentPollutant]))
         .curve(d3.curveMonotoneX);
     
+    let hoveredCity = null;
+    
+    // Função para interpolar valores entre dois pontos
+    function interpolateValue(point1, point2, targetDate, pollutant) {
+        const t = (targetDate - point1.date) / (point2.date - point1.date);
+        const value1 = point1[pollutant];
+        const value2 = point2[pollutant];
+        return value1 + (value2 - value1) * t;
+    }
+    
     cityGroups.forEach((values, city) => {
         const cityIndex = topCities.indexOf(city);
         const color = cityColors[cityIndex % cityColors.length];
         
+        const sortedValues = values.sort((a, b) => a.date - b.date);
+        
         const path = svg.append('path')
-            .datum(values.sort((a, b) => a.date - b.date))
+            .datum(sortedValues)
             .attr('class', 'line')
             .attr('d', line)
             .attr('stroke', color)
             .attr('stroke-width', 2.5)
             .attr('fill', 'none')
             .attr('opacity', 0.8);
+        
+        path.on('mouseover', function(event) {
+            hoveredCity = city;
+            d3.select(this)
+                .attr('stroke-width', 4)
+                .attr('opacity', 1);
+        })
+        .on('mousemove', function(event) {
+            if (hoveredCity !== city) return;
+            
+            const xPos = d3.pointer(event, svg.node())[0];
+            const date = x.invert(xPos);
+            
+            // Encontrar os dois pontos mais próximos
+            const bisect = d3.bisector(d => d.date).left;
+            const idx = bisect(sortedValues, date);
+            
+            let value, displayDate;
+            
+            if (idx === 0) {
+                value = sortedValues[0][currentPollutant];
+                displayDate = sortedValues[0].date;
+            } else if (idx === sortedValues.length) {
+                value = sortedValues[sortedValues.length - 1][currentPollutant];
+                displayDate = sortedValues[sortedValues.length - 1].date;
+            } else {
+                // Interpolar entre os dois pontos
+                const point1 = sortedValues[idx - 1];
+                const point2 = sortedValues[idx];
+                value = interpolateValue(point1, point2, date, currentPollutant);
+                displayDate = date;
+            }
+            
+            const dateStr = new Date(displayDate).toLocaleDateString('pt-BR');
+            
+            showTooltip(event, `
+                <strong>${city}</strong><br/>
+                ${getPollutantLabel(currentPollutant)}: ${value.toFixed(2)} µg/m³<br/>
+                <span style="font-size: 12px; color: #9ca3af;">${dateStr}</span>
+            `);
+        })
+        .on('mouseout', function(event) {
+            d3.select(this)
+                .attr('stroke-width', 2.5)
+                .attr('opacity', 0.8);
+            hideTooltip();
+            hoveredCity = null;
+        });
         
         const totalLength = path.node().getTotalLength();
         path

@@ -150,11 +150,49 @@ body::before {
     letter-spacing: 0.1em;
 }
 
+.hero-author {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: var(--spacing-sm);
+    margin: var(--spacing-md) auto;
+    padding: var(--spacing-sm) var(--spacing-md);
+    background: rgba(0, 217, 255, 0.1);
+    border: 1px solid rgba(0, 217, 255, 0.3);
+    border-radius: 8px;
+    max-width: 350px;
+    animation: fadeInUp 1s ease-out 0.3s backwards;
+}
+
+.author-icon {
+    font-size: 1.8rem;
+    line-height: 1;
+}
+
+.author-info {
+    text-align: left;
+}
+
+.author-name {
+    font-size: 0.9rem;
+    font-weight: 600;
+    color: var(--color-primary);
+    margin: 0;
+    font-family: 'Crimson Pro', serif;
+}
+
+.author-details {
+    font-size: 0.75rem;
+    color: #9ca3af;
+    margin: 2px 0 0 0;
+    font-family: 'JetBrains Mono', monospace;
+}
+
 .hero-subtitle {
     font-size: clamp(1rem, 2vw, 1.5rem);
     color: var(--color-text-dim);
     max-width: 700px;
-    margin: var(--spacing-md) auto;
+    margin: -8px auto var(--spacing-md) auto;
     line-height: 1.8;
     animation: fadeInUp 1s ease-out 0.4s backwards;
 }
@@ -194,17 +232,14 @@ body::before {
 }
 
 .scroll-indicator {
-    position: absolute;
-    bottom: 30px;
-    left: 50%;
-    transform: translateX(-50%);
+    margin-top: 40px;
     text-align: center;
     animation: bounce 2s ease-in-out infinite;
 }
 
 @keyframes bounce {
-    0%, 100% { transform: translateX(-50%) translateY(0); }
-    50% { transform: translateX(-50%) translateY(-10px); }
+    0%, 100% { transform: translateY(0); }
+    50% { transform: translateY(-10px); }
 }
 
 .scroll-indicator span:first-child {
@@ -361,6 +396,101 @@ body::before {
     position: relative;
     z-index: 1;
     padding: var(--spacing-xl) 0;
+}
+
+/* ESTATÍSTICAS RESUMIDAS */
+.stats-summary-section {
+    margin-bottom: var(--spacing-xl);
+    padding: var(--spacing-lg);
+    background: linear-gradient(135deg, rgba(10, 14, 26, 0.6) 0%, rgba(26, 31, 54, 0.6) 100%);
+    border: 1px solid #252d47;
+    border-radius: 12px;
+    backdrop-filter: blur(10px);
+}
+
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: var(--spacing-md);
+}
+
+.stat-card {
+    background: rgba(15, 23, 42, 0.8);
+    border: 1px solid #1e293b;
+    border-radius: 8px;
+    padding: var(--spacing-md);
+    text-align: center;
+    transition: all 0.3s ease;
+}
+
+.stat-card:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-4px);
+    box-shadow: 0 8px 16px rgba(0, 217, 255, 0.15);
+}
+
+.stat-card-label {
+    font-size: 0.85rem;
+    color: #9ca3af;
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+    margin-bottom: 8px;
+    font-weight: 500;
+}
+
+.stat-card-value {
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--color-primary);
+    margin-bottom: 4px;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+.stat-card-unit {
+    font-size: 0.75rem;
+    color: #6b7280;
+    font-family: 'JetBrains Mono', monospace;
+}
+
+/* RANKING SECTION */
+.ranking-section {
+    display: none;
+}
+
+.ranking-header {
+    display: none;
+}
+
+.ranking-title {
+    display: none;
+}
+
+.ranking-list {
+    display: none;
+}
+
+.ranking-item {
+    display: none;
+}
+
+.ranking-position {
+    display: none;
+}
+
+.ranking-city-info {
+    display: none;
+}
+
+.ranking-city-name {
+    display: none;
+}
+
+.ranking-city-extra {
+    display: none;
+}
+
+.ranking-value {
+    display: none;
 }
 
 .chart-section {

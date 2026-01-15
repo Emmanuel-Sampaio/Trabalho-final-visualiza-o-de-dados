@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Qualidade do Ar Global | Visualização Interativa</title>
     
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='80' fill='%2300d9ff'>🌍</text></svg>">
+    
     <link rel="stylesheet" href="css/styles.css">
     
     <script src="https://d3js.org/d3.v7.min.js"></script>
@@ -31,6 +34,13 @@
                 <span class="title-line">DO AR</span>
                 <span class="title-line-small">global</span>
             </h1>
+            <div class="hero-author">
+                <div class="author-icon">📊</div>
+                <div class="author-info">
+                    <p class="author-name">Emmanuel Lima Sampaio</p>
+                    <p class="author-details">539726 • Visualização de Dados</p>
+                </div>
+            </div>
            <p class="hero-subtitle">Visualização interativa de dados de poluição atmosférica em 40 grandes cidades mundiais</p>
             <div class="hero-stats" >
                 <div class="stat-item">
@@ -113,6 +123,32 @@
 
     <main class="main-content">
         <div class="container">
+            
+            <!-- ESTATÍSTICAS RESUMIDAS -->
+            <section class="stats-summary-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-label">Poluição Média</div>
+                        <div class="stat-card-value" id="avg-pollution">--</div>
+                        <div class="stat-card-unit">µg/m³</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-label">Cidade Mais Poluída</div>
+                        <div class="stat-card-value" id="most-polluted">--</div>
+                        <div class="stat-card-unit" id="most-polluted-value">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-label">Cidade Mais Limpa</div>
+                        <div class="stat-card-value" id="most-clean">--</div>
+                        <div class="stat-card-unit" id="most-clean-value">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-label">Tendência Geral</div>
+                        <div class="stat-card-value" id="trend-direction">↔</div>
+                        <div class="stat-card-unit" id="trend-percent">0%</div>
+                    </div>
+                </div>
+            </section>
             
             <section class="chart-section">
                 <div class="section-header">
