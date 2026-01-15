@@ -195,7 +195,7 @@ body::before {
 
 .scroll-indicator {
     position: absolute;
-    bottom: var(--spacing-lg);
+    bottom: 30px;
     left: 50%;
     transform: translateX(-50%);
     text-align: center;
@@ -209,17 +209,19 @@ body::before {
 
 .scroll-indicator span:first-child {
     display: block;
-    font-size: 2rem;
+    font-size: 1.5rem;
     color: var(--color-primary);
+    line-height: 1;
 }
 
 .scroll-text {
     display: block;
-    font-size: 0.75rem;
+    font-size: 0.7rem;
     color: var(--color-text-dimmer);
     text-transform: uppercase;
     letter-spacing: 0.1em;
     margin-top: 0.5rem;
+    white-space: nowrap;
 }
 
 .filters-section {
