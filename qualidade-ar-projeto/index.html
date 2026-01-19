@@ -1,0 +1,470 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Qualidade do Ar Global | Visualização Interativa</title>
+    
+    <!-- Favicon -->
+    <link rel="icon" type="image/svg+xml" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='75' font-size='80' fill='%2300d9ff'>🌍</text></svg>">
+    
+    <link rel="stylesheet" href="css/styles.css">
+    
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/crossfilter2/1.5.4/crossfilter.min.js"></script>
+    
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/dc/4.2.7/dc.min.css">
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/dc/4.2.7/dc.min.js"></script>
+    
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css" />
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Bebas+Neue&family=Crimson+Pro:wght@400;600&family=JetBrains+Mono:wght@400;700&display=swap" rel="stylesheet">
+</head>
+<body>
+    <header class="hero">
+        <div class="hero-bg"></div>
+        <div class="hero-content">
+            <div class="hero-badge">DADOS 2023-2025</div>
+            <h1 class="hero-title">
+                <span class="title-line">QUALIDADE</span>
+                <span class="title-line">DO AR</span>
+                <span class="title-line-small">global</span>
+            </h1>
+            <div class="hero-author">
+                <div class="author-icon">📊</div>
+                <div class="author-info">
+                    <p class="author-name">Emmanuel Lima Sampaio</p>
+                    <p class="author-details">539726 • Visualização de Dados</p>
+                </div>
+            </div>
+           <p class="hero-subtitle">Visualização interativa de dados de poluição atmosférica em 40 grandes cidades mundiais</p>
+            <div class="hero-stats" >
+                <div class="stat-item">
+                    <div class="stat-number">40</div>
+                    <div class="stat-label">Cidades</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-number">42k</div>
+                    <div class="stat-label">Registros</div>
+                </div>
+                <div class="stat-divider"></div>
+                <div class="stat-item">
+                    <div class="stat-number">5</div>
+                    <div class="stat-label">Poluentes</div>
+                </div>
+            </div>
+            <div class="scroll-indicator">
+                <span>↓</span>
+                <span class="scroll-text">Explore os dados</span>
+            </div>
+        </div>
+    </header>
+
+    <section class="filters-section">
+        <div class="container">
+            <div class="filters-grid">
+                <div class="filter-card">
+                    <label class="filter-label">POLUENTE</label>
+                    <select id="pollutant-select" class="filter-select">
+                        <option value="pm25" selected>PM2.5 - Material Particulado</option>
+                        <option value="pm10">PM10 - Partículas Inaláveis</option>
+                        <option value="no2">NO₂ - Dióxido de Nitrogênio</option>
+                        <option value="o3">O₃ - Ozônio</option>
+                        <option value="so2">SO₂ - Dióxido de Enxofre</option>
+                        <option value="aqi">AQI - Índice de Qualidade</option>
+                    </select>
+                </div>
+                <div class="filter-card">
+                    <label class="filter-label">ANO</label>
+                    <select id="year-select" class="filter-select">
+                        <option value="all" selected>Todos os Anos</option>
+                        <option value="2023">2023</option>
+                        <option value="2024">2024</option>
+                        <option value="2025">2025</option>
+                    </select>
+                </div>
+                <div class="filter-card">
+                    <label class="filter-label">CONTINENTE</label>
+                    <select id="continent-select" class="filter-select">
+                        <option value="all" selected>Todos</option>
+                        <option value="Asia">Ásia</option>
+                        <option value="Europe">Europa</option>
+                        <option value="North America">América do Norte</option>
+                        <option value="South America">América do Sul</option>
+                        <option value="Africa">África</option>
+                        <option value="Oceania">Oceania</option>
+                    </select>
+                </div>
+                <div class="filter-card">
+                    <label class="filter-label">PAÍS</label>
+                    <select id="country-select" class="filter-select" disabled>
+                        <option value="all" selected>Selecione um continente</option>
+                    </select>
+                </div>
+                <div class="filter-card">
+                    <label class="filter-label">CIDADES</label>
+                    <select id="city-select" class="filter-select" disabled>
+                        <option value="">Selecione um país</option>
+                    </select>
+                </div>
+                <div class="filter-card">
+                    <button id="reset-btn" class="reset-btn">
+                        <span>↻</span> Resetar Filtros
+                    </button>
+                </div>
+            </div>
+        </div>
+    </section>
+
+    <main class="main-content">
+        <div class="container">
+            
+            <!-- ESTATÍSTICAS RESUMIDAS -->
+            <section class="stats-summary-section">
+                <div class="stats-grid">
+                    <div class="stat-card">
+                        <div class="stat-card-label">Poluição Média</div>
+                        <div class="stat-card-value" id="avg-pollution">--</div>
+                        <div class="stat-card-unit">µg/m³</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-label">Cidade Mais Poluída</div>
+                        <div class="stat-card-value" id="most-polluted">--</div>
+                        <div class="stat-card-unit" id="most-polluted-value">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-label">Cidade Mais Limpa</div>
+                        <div class="stat-card-value" id="most-clean">--</div>
+                        <div class="stat-card-unit" id="most-clean-value">--</div>
+                    </div>
+                    <div class="stat-card">
+                        <div class="stat-card-label">Tendência Geral</div>
+                        <div class="stat-card-value" id="trend-direction">↔</div>
+                        <div class="stat-card-unit" id="trend-percent">0%</div>
+                    </div>
+                </div>
+            </section>
+            
+            <section class="chart-section">
+                <div class="section-header">
+                    <div class="section-number">01</div>
+                    <div class="section-info">
+                        <h2 class="section-title">Ranking de Poluição por Cidade</h2>
+                        <p class="section-desc">Comparação das concentrações médias anuais entre as principais cidades</p>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div id="bar-chart" class="chart"></div>
+                </div>
+            </section>
+
+            <section class="chart-section">
+                <div class="section-header">
+                    <div class="section-number">02</div>
+                    <div class="section-info">
+                        <h2 class="section-title">Evolução Temporal</h2>
+                        <p class="section-desc">Tendências mensais de poluição ao longo do período analisado</p>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div id="time-chart" class="chart"></div>
+                    <div class="legend-container" id="legend-container"></div>
+                </div>
+            </section>
+
+            <section class="chart-section">
+                <div class="section-header">
+                    <div class="section-number">03</div>
+                    <div class="section-info">
+                        <h2 class="section-title">Mapa Global Interativo</h2>
+                        <p class="section-desc">Distribuição geográfica da qualidade do ar nas cidades monitoradas</p>
+                    </div>
+                    <div class="special-badge">GRÁFICO ESPECIAL</div>
+                </div>
+                <div class="chart-container map-container">
+                    <div id="map" class="map-chart"></div>
+                    <div class="map-legend">
+                        <div class="map-legend-title">Nível de Poluição</div>
+                        <div class="map-legend-items">
+                            <div class="map-legend-item">
+                                <div class="legend-color" style="background: #10b981"></div>
+                                <span>Bom (0-50)</span>
+                            </div>
+                            <div class="map-legend-item">
+                                <div class="legend-color" style="background: #fbbf24"></div>
+                                <span>Moderado (51-100)</span>
+                            </div>
+                            <div class="map-legend-item">
+                                <div class="legend-color" style="background: #f97316"></div>
+                                <span>Ruim (101-150)</span>
+                            </div>
+                            <div class="map-legend-item">
+                                <div class="legend-color" style="background: #ef4444"></div>
+                                <span>Muito Ruim (150+)</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <section class="chart-section">
+                <div class="section-header">
+                    <div class="section-number">04</div>
+                    <div class="section-info">
+                        <h2 class="section-title">Calendário de Poluição</h2>
+                        <p class="section-desc">Padrões diários e sazonais de qualidade do ar</p>
+                    </div>
+                    <div class="special-badge">GRÁFICO ESPECIAL</div>
+                </div>
+                <div class="chart-container">
+                    <div class="heatmap-controls">
+                        <select id="heatmap-city-select" class="filter-select">
+                        </select>
+                    </div>
+                    <div id="calendar-heatmap" class="chart"></div>
+                    <div class="heatmap-legend">
+                        <span class="heatmap-legend-label">Menor</span>
+                        <div class="heatmap-legend-gradient"></div>
+                        <span class="heatmap-legend-label">Maior</span>
+                    </div>
+                </div>
+            </section>
+
+            <section class="chart-section">
+                <div class="section-header">
+                    <div class="section-number">05</div>
+                    <div class="section-info">
+                        <h2 class="section-title">Variabilidade de Poluição por Cidade</h2>
+                        <p class="section-desc">Distribuição e dispersão dos níveis de poluição usando violin plots</p>
+                    </div>
+                </div>
+                <div class="chart-container">
+                    <div id="donut-chart" class="chart"></div>
+                    <div class="donut-legend" id="donut-legend"></div>
+                </div>
+            </section>
+
+            <section class="chart-section">
+                <div class="section-header">
+                    <div class="section-number">06</div>
+                    <div class="section-info">
+                        <h2 class="section-title">Distribuição de Poluição por Cidade</h2>
+                        <p class="section-desc">Análise em ridgeline mostrando como a poluição se distribui e comporta em cada cidade</p>
+                    </div>
+                    <div class="special-badge">GRÁFICO ESPECIAL</div>
+                </div>
+                <div class="chart-container">
+                    <div id="radar-chart" class="chart"></div>
+                    <div class="radar-legend" id="radar-legend"></div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+    <!-- SEÇÃO DE INSIGHTS - Adicionar antes do footer -->
+<section id="insights" class="insights-section">
+    <div class="container">
+        <div class="section-header">
+            <h2 class="section-title">
+                <span class="icon">💡</span>
+                PRINCIPAIS INSIGHTS
+            </h2>
+            <p class="section-subtitle">Descobertas e Conclusões da Análise de Dados</p>
+        </div>
+
+        <!-- Grid de Insights -->
+        <div class="insights-grid">
+            
+            <!-- Insight 1: Distribuição Geográfica -->
+            <div class="insight-card highlight">
+                <div class="insight-icon">🌏</div>
+                <h3 class="insight-title">Distribuição Geográfica da Poluição</h3>
+                <div class="insight-content">
+                    <p class="insight-stat">Cidades asiáticas lideram em poluição</p>
+                    <ul class="insight-list">
+                        <li><strong>Ásia:</strong> 4 das 5 cidades mais poluídas (Delhi, Kolkata, Cairo, Beijing)</li>
+                        <li><strong>PM2.5 médio:</strong> Delhi 110 µg/m³ vs Sydney 15 µg/m³ (7× mais poluída)</li>
+                        <li><strong>Oceania e Europa Ocidental:</strong> melhor qualidade do ar global</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Insight 2: Padrões Sazonais -->
+            <div class="insight-card">
+                <div class="insight-icon">📅</div>
+                <h3 class="insight-title">Padrões Sazonais Marcantes</h3>
+                <div class="insight-content">
+                    <p class="insight-stat">Inverno concentra maior poluição</p>
+                    <ul class="insight-list">
+                        <li><strong>Hemisfério Norte:</strong> pico em dezembro-fevereiro (aquecimento + inversão térmica)</li>
+                        <li><strong>Hemisfério Sul:</strong> padrão invertido, pico em junho-agosto</li>
+                        <li><strong>Variação sazonal:</strong> até 50% de diferença entre verão e inverno</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Insight 3: Variabilidade -->
+            <div class="insight-card">
+                <div class="insight-icon">📊</div>
+                <h3 class="insight-title">Alta Variabilidade Diária</h3>
+                <div class="insight-content">
+                    <p class="insight-stat">Flutuações significativas dentro da mesma cidade</p>
+                    <ul class="insight-list">
+                        <li><strong>Delhi:</strong> variação de ±40 µg/m³ no mesmo mês</li>
+                        <li><strong>Fatores:</strong> condições meteorológicas, tráfego, eventos especiais</li>
+                        <li><strong>Dias úteis vs finais de semana:</strong> redução de até 15% aos domingos</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Insight 4: Classificação por Nível -->
+            <div class="insight-card highlight">
+                <div class="insight-icon">🎯</div>
+                <h3 class="insight-title">Classificação das Cidades</h3>
+                <div class="insight-content">
+                    <div class="classification-grid" id="classification-grid">
+                    </div>
+                </div>
+            </div>
+
+            <!-- Insight 5: Poluentes -->
+            <div class="insight-card">
+                <div class="insight-icon">🔬</div>
+                <h3 class="insight-title">Perfil dos Poluentes</h3>
+                <div class="insight-content">
+                    <p class="insight-stat">Cada cidade tem seu perfil de poluição</p>
+                    <ul class="insight-list">
+                        <li><strong>PM2.5 e PM10:</strong> principais preocupações em megacidades asiáticas e africanas</li>
+                        <li><strong>NO₂:</strong> elevado em cidades com alto tráfego veicular (México, Los Angeles)</li>
+                        <li><strong>O₃:</strong> maior em cidades com alta radiação solar e NOx</li>
+                        <li><strong>SO₂:</strong> relacionado a atividades industriais (Beijing, Shanghai)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Insight 6: Tendências -->
+            <div class="insight-card">
+                <div class="insight-icon">📈</div>
+                <h3 class="insight-title">Tendências 2023-2025</h3>
+                <div class="insight-content">
+                    <p class="insight-stat">Progressos desiguais entre regiões</p>
+                    <ul class="insight-list">
+                        <li><strong>Melhoria:</strong> cidades europeias e algumas asiáticas (Pequim -12%)</li>
+                        <li><strong>Estável:</strong> América do Norte e Oceania mantêm padrões</li>
+                        <li><strong>Piora:</strong> algumas cidades africanas e sul-asiáticas (+5 a 8%)</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Insight 7: População -->
+            <div class="insight-card">
+                <div class="insight-icon">🏙️</div>
+                <h3 class="insight-title">Urbanização e Poluição</h3>
+                <div class="insight-content">
+                    <p class="insight-stat">Megacidades enfrentam desafios maiores</p>
+                    <ul class="insight-list">
+                        <li><strong>Correlação moderada:</strong> tamanho populacional × níveis de poluição</li>
+                        <li><strong>Exceções notáveis:</strong> Tokyo (baixa poluição) e Delhi (alta poluição)</li>
+                        <li><strong>Densidade urbana:</strong> mais relevante que tamanho absoluto</li>
+                    </ul>
+                </div>
+            </div>
+
+            <!-- Insight 8: Impacto na Saúde -->
+            <div class="insight-card highlight">
+                <div class="insight-icon">⚕️</div>
+                <h3 class="insight-title">Impacto na Saúde Pública</h3>
+                <div class="insight-content">
+                    <p class="insight-stat">Bilhões expostos a níveis perigosos</p>
+                    <ul class="insight-list">
+                        <li><strong>OMS:</strong> limite recomendado de PM2.5 é 15 µg/m³ (24h) e 5 µg/m³ (anual)</li>
+                        <li><strong>Excesso:</strong> <span id="cities-exceeding-oms">--</span> das 40 cidades excedem limites da OMS</li>
+                        <li><strong>População afetada:</strong> ~2,5 bilhões de pessoas nas cidades monitoradas</li>
+                        <li><strong>Riscos:</strong> doenças cardiovasculares, respiratórias e câncer de pulmão</li>
+                    </ul>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Conclusões -->
+        <div class="conclusions-section">
+            <h3 class="conclusions-title">
+                <span class="icon">🎓</span>
+                Conclusões Gerais
+            </h3>
+            <div class="conclusions-content">
+                <div class="conclusion-box">
+                    <h4>1. Desigualdade Global</h4>
+                    <p>Existe uma significativa desigualdade na qualidade do ar entre regiões desenvolvidas e em desenvolvimento. Cidades em países de renda alta geralmente apresentam melhores indicadores de qualidade do ar devido a regulamentações mais rigorosas e tecnologias mais limpas.</p>
+                </div>
+
+                <div class="conclusion-box">
+                    <h4>2. Necessidade de Ação Urgente</h4>
+                    <p>Com mais de 80% das cidades analisadas excedendo os limites recomendados pela OMS, há necessidade urgente de políticas públicas robustas, investimento em transporte limpo e transição energética.</p>
+                </div>
+
+                <div class="conclusion-box">
+                    <h4>3. Padrões Previsíveis</h4>
+                    <p>A identificação de padrões sazonais e semanais permite melhor planejamento de políticas de mitigação, como rodízio de veículos em dias críticos e alertas de saúde para populações vulneráveis.</p>
+                </div>
+
+                <div class="conclusion-box">
+                    <h4>4. Monitoramento Contínuo</h4>
+                    <p>A variabilidade diária significativa reforça a importância do monitoramento contínuo e sistemas de alerta em tempo real para proteger a saúde da população.</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- Metodologia -->
+        <div class="methodology-section">
+            <h3 class="methodology-title">
+                <span class="icon">🔍</span>
+                Sobre a Metodologia
+            </h3>
+            <div class="methodology-content">
+                <div class="method-item">
+                    <strong>Fonte de Dados:</strong>
+                    <p>Dados sintéticos gerados com base em padrões reais da OpenAQ API para demonstração educacional</p>
+                </div>
+                <div class="method-item">
+                    <strong>Período Analisado:</strong>
+                    <p>Janeiro de 2023 a Janeiro de 2025 (aproximadamente 42.000 registros)</p>
+                </div>
+                <div class="method-item">
+                    <strong>Métricas Principais:</strong>
+                    <p>PM2.5, PM10, NO₂, O₃, SO₂ e AQI calculado com base nos padrões EPA</p>
+                </div>
+                <div class="method-item">
+                    <strong>Análise:</strong>
+                    <p>Médias diárias, mensais e anuais com identificação de padrões temporais e espaciais</p>
+                </div>
+            </div>
+        </div>
+    </div>
+</section>  
+
+    <footer class="footer">
+        <div class="container">
+            <div class="footer-content">
+                <div class="footer-info">
+                    <h3>Projeto Final - Visualização de Dados</h3>
+                    <p>Emmanuel Lima Sampaio | 539726 | Semestre 2025.2</p>
+                </div>
+                <div class="footer-links">
+                    <a href="https://openaq.org" target="_blank">OpenAQ</a>
+                    <a href="https://www.who.int" target="_blank">WHO</a>
+                    <a href="https://github.com" target="_blank">GitHub</a>
+                </div>
+            </div>
+        </div>
+    </footer>
+
+    <script src="js/main.js"></script>
+</body>
+</html>
